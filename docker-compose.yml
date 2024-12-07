@@ -1,0 +1,91 @@
+# This file is used for production, not for development!
+
+version: "3.4"
+
+services:
+  nginx:
+    image: course-nginx
+    container_name: course-nginx
+    hostname: course-nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "8086:80"
+    networks:
+      - nginx
+    depends_on:
+      - course-frontend
+      - course-backend
+      - course-distribute-server
+      - course-mongodb
+      - course-redisdb
+
+  course-frontend:
+    image: course-frontend
+    build:
+      context: .
+      dockerfile: ./prod-support/frontend/Dockerfile
+    container_name: course-frontend
+    expose:
+      - "3000"
+    networks:
+      - nginx
+    environment:
+      - REACT_APP_API_HOST=https://course.ntuee.org
+
+  course-backend:
+    image: course-backend
+    build:
+      context: .
+      dockerfile: ./prod-support/backend/Dockerfile
+    container_name: course-backend
+    expose:
+      - "8000"
+    networks:
+      - nginx
+    environment:
+      - MONGO_HOST=course-mongodb
+      - REDIS_HOST=course-redisdb
+      - DISTRIBUTE_SERVER_HOST=course-distribute-server
+      - DISTRIBUTE_SERVER_PORT=8001
+
+  course-mongodb:
+    image: mongo
+    container_name: course-mongodb
+    expose:
+      - "27017"
+    networks:
+      - nginx
+    # environment:
+    #   - MONGO_INITDB_ROOT_USERNAME=eeinfo
+    #   - MONGO_INITDB_ROOT_PASSWORD=R9ujPAQBk4X2fdkv
+    #   - MONGO_INITDB_ROOT_PASSWORD=brmEu8EkRwaudH4J
+    volumes:
+      - course-mongo-prod:/data/db
+
+  course-redisdb:
+    image: redis
+    container_name: course-redisdb
+    expose:
+      - "6379"
+    networks:
+      - nginx
+
+  course-distribute-server:
+    image: course-distribute-server
+    build:
+      context: .
+      dockerfile: ./prod-support/distribute-server/Dockerfile
+    container_name: course-distribute-server
+    expose:
+      - "8001"
+    networks:
+      - nginx
+
+networks:
+  nginx:
+    external: true
+
+volumes:
+  course-mongo-prod:
